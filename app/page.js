@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 
 export default function Home() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [mensagem, setMensagem] = useState('')
@@ -16,9 +18,11 @@ export default function Home() {
 
     if (error) {
       setMensagem(error.message)
-    } else {
-      setMensagem('Login realizado com sucesso')
+      return
     }
+
+    // ✅ REDIRECIONAMENTO GARANTIDO
+    router.push('/onboarding')
   }
 
   async function cadastrar() {
@@ -29,15 +33,15 @@ export default function Home() {
 
     if (error) {
       setMensagem(error.message)
-    } else {
-      setMensagem('Conta criada! Verifique seu email.')
+      return
     }
+
+    setMensagem('Conta criada com sucesso. Agora faça login.')
   }
 
   return (
     <div style={{ padding: 40, maxWidth: 400 }}>
       <h1>Mordomo</h1>
-      <p>Login</p>
 
       <input
         type="email"
