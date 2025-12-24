@@ -1,67 +1,49 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../../lib/supabase'
 
-export default function Home() {
-  const [email, setEmail] = useState('')
-  const [senha, setSenha] = useState('')
+export default function Onboarding() {
   const [mensagem, setMensagem] = useState('')
-  const router = useRouter()
 
-  async function entrar() {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: senha,
-    })
+  async function escolherTipo(tipo) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    if (error) {
-      setMensagem(error.message)
-    } else {
-      router.push('/onboarding')
+    if (!user) {
+      setMensagem('Usuário não autenticado. Faça login novamente.')
+      return
     }
-  }
 
-  async function cadastrar() {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password: senha,
-    })
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        tipo_conta: tipo,
+      })
 
     if (error) {
-      setMensagem(error.message)
+      setMensagem('Erro ao salvar. Tente novamente.')
     } else {
-      router.push('/onboarding')
+      setMensagem('Escolha salva com sucesso!')
     }
   }
 
   return (
-    <div style={{ padding: 40, maxWidth: 400 }}>
-      <h1>Mordomo</h1>
+    <div style={{ padding: 40 }}>
+      <h1>Bem-vindo ao Mordomo</h1>
+      <p>Como você deseja usar o sistema?</p>
 
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-        style={{ width: '100%', marginBottom: 10 }}
-      />
-
-      <input
-        type="password"
-        placeholder="Senha"
-        value={senha}
-        onChange={e => setSenha(e.target.value)}
-        style={{ width: '100%', marginBottom: 10 }}
-      />
-
-      <button onClick={entrar} style={{ marginRight: 10 }}>
-        Entrar
+      <button onClick={() => escolherTipo('individual')}>
+        Individual
       </button>
 
-      <button onClick={cadastrar}>
-        Cadastrar
+      <button
+        onClick={() => escolherTipo('casal')}
+        style={{ marginLeft: 10 }}
+      >
+        Casal
       </button>
 
       {mensagem && <p>{mensagem}</p>}
