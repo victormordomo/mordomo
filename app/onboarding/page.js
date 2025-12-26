@@ -2,19 +2,20 @@
 
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { useRouter } from 'next/navigation'
 
 export default function Onboarding() {
-  const router = useRouter()
-
+  const [etapa, setEtapa] = useState('escolha')
   const [tipoConta, setTipoConta] = useState('')
   const [nome1, setNome1] = useState('')
   const [nome2, setNome2] = useState('')
   const [mensagem, setMensagem] = useState('')
 
-  async function salvarDados() {
-    setMensagem('Salvando...')
+  async function escolherTipo(tipo) {
+    setTipoConta(tipo)
+    setEtapa('nomes')
+  }
 
+  async function salvarDados() {
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -24,41 +25,46 @@ export default function Onboarding() {
       return
     }
 
-    const dados = {
-      id: user.id,
-      tipo_conta: tipoConta,
-      nome_1: nome1,
-      nome_2: tipoConta === 'casal' ? nome2 : null,
-    }
+    const dados =
+      tipoConta === 'individual'
+        ? {
+            user_id: user.id,
+            tipo_conta: 'individual',
+            nome_1: nome1,
+          }
+        : {
+            user_id: user.id,
+            tipo_conta: 'casal',
+            nome_1: nome1,
+            nome_2: nome2,
+          }
 
     const { error } = await supabase
       .from('profiles')
-      .upsert(dados)
+      .insert(dados)
 
     if (error) {
       console.error(error)
       setMensagem('Erro ao salvar os dados')
-      return
+    } else {
+      window.location.href = '/dashboard'
     }
-
-    setMensagem('Dados salvos com sucesso')
-    router.push('/dashboard')
   }
 
   return (
     <div style={{ padding: 40, maxWidth: 400 }}>
       <h1>Bem-vindo ao Mordomo</h1>
 
-      {!tipoConta && (
+      {etapa === 'escolha' && (
         <>
           <p>Como você deseja usar o sistema?</p>
 
-          <button onClick={() => setTipoConta('individual')}>
+          <button onClick={() => escolherTipo('individual')}>
             Individual
           </button>
 
           <button
-            onClick={() => setTipoConta('casal')}
+            onClick={() => escolherTipo('casal')}
             style={{ marginLeft: 10 }}
           >
             Casal
@@ -66,37 +72,31 @@ export default function Onboarding() {
         </>
       )}
 
-      {tipoConta && (
+      {etapa === 'nomes' && (
         <>
-          <h3>Informe os dados</h3>
+          <p>Informe os nomes</p>
 
-          <label>Nome</label>
           <input
-            type="text"
+            placeholder="Nome principal"
             value={nome1}
             onChange={e => setNome1(e.target.value)}
             style={{ width: '100%', marginBottom: 10 }}
           />
 
           {tipoConta === 'casal' && (
-            <>
-              <label>Nome do cônjuge</label>
-              <input
-                type="text"
-                value={nome2}
-                onChange={e => setNome2(e.target.value)}
-                style={{ width: '100%', marginBottom: 10 }}
-              />
-            </>
+            <input
+              placeholder="Nome do cônjuge"
+              value={nome2}
+              onChange={e => setNome2(e.target.value)}
+              style={{ width: '100%', marginBottom: 10 }}
+            />
           )}
 
-          <button onClick={salvarDados}>
-            Salvar e continuar
-          </button>
+          <button onClick={salvarDados}>Salvar</button>
+
+          {mensagem && <p>{mensagem}</p>}
         </>
       )}
-
-      {mensagem && <p>{mensagem}</p>}
     </div>
   )
 }
