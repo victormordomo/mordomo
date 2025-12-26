@@ -1,30 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useRouter } from 'next/navigation'
 
 export default function Onboarding() {
   const [tipo, setTipo] = useState(null)
   const [nome1, setNome1] = useState('')
   const [nome2, setNome2] = useState('')
   const [mensagem, setMensagem] = useState('')
-  const [user, setUser] = useState(null)
+  const router = useRouter()
 
-  useEffect(() => {
-    async function carregarUsuario() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      setUser(user)
-    }
-    carregarUsuario()
-  }, [])
+  async function salvarTipo(tipoEscolhido) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  async function escolherTipo(tipoEscolhido) {
-    setTipo(tipoEscolhido)
-  }
-
-  async function salvarNomes() {
     if (!user) {
       setMensagem('Usuário não autenticado')
       return
@@ -32,15 +23,41 @@ export default function Onboarding() {
 
     const { error } = await supabase.from('profiles').upsert({
       id: user.id,
-      tipo_conta: tipo,
-      nome_1: nome1,
-      nome_2: tipo === 'casal' ? nome2 : null,
+      tipo_conta: tipoEscolhido,
     })
 
     if (error) {
-      setMensagem('Erro ao salvar dados')
+      setMensagem('Erro ao salvar tipo de conta')
     } else {
-      setMensagem('Dados salvos com sucesso')
+      setTipo(tipoEscolhido)
+      setMensagem('')
+    }
+  }
+
+  async function salvarNomes() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      setMensagem('Usuário não autenticado')
+      return
+    }
+
+    const dados =
+      tipo === 'casal'
+        ? { nome_1: nome1, nome_2: nome2 }
+        : { nome_1: nome1 }
+
+    const { error } = await supabase.from('profiles').upsert({
+      id: user.id,
+      ...dados,
+    })
+
+    if (error) {
+      setMensagem('Erro ao salvar os dados')
+    } else {
+      router.push('/dashboard')
     }
   }
 
@@ -51,13 +68,11 @@ export default function Onboarding() {
       {!tipo && (
         <>
           <p>Como você deseja usar o sistema?</p>
-
-          <button onClick={() => escolherTipo('individual')}>
+          <button onClick={() => salvarTipo('individual')}>
             Individual
           </button>
-
           <button
-            onClick={() => escolherTipo('casal')}
+            onClick={() => salvarTipo('casal')}
             style={{ marginLeft: 10 }}
           >
             Casal
@@ -67,11 +82,7 @@ export default function Onboarding() {
 
       {tipo && (
         <>
-          <p>
-            {tipo === 'individual'
-              ? 'Qual é o seu nome?'
-              : 'Quais são os nomes do casal?'}
-          </p>
+          <p>Informe os nomes</p>
 
           <input
             placeholder="Nome"
@@ -89,9 +100,7 @@ export default function Onboarding() {
             />
           )}
 
-          <button onClick={salvarNomes}>
-            Salvar
-          </button>
+          <button onClick={salvarNomes}>Salvar</button>
         </>
       )}
 
