@@ -4,9 +4,9 @@ import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
 export default function Transacoes() {
-  const [tipo, setTipo] = useState('saida')
-  const [categoria, setCategoria] = useState('alimentacao')
-  const [valor, setValor] = useState('')
+  const [type, setType] = useState('saida')
+  const [category, setCategory] = useState('alimentacao')
+  const [amount, setAmount] = useState('')
   const [mensagem, setMensagem] = useState('')
 
   async function salvarTransacao() {
@@ -19,19 +19,21 @@ export default function Transacoes() {
       return
     }
 
-    const { error } = await supabase.from('transacoes').insert({
-      user_id: user.id,
-      tipo,
-      categoria,
-      valor,
-      data: new Date(),
-    })
+    const { error } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: user.id,
+        type: type,
+        category: category,
+        amount: Number(amount),
+      })
 
     if (error) {
+      console.error(error)
       setMensagem('Erro ao salvar transação')
     } else {
       setMensagem('Transação salva com sucesso')
-      setValor('')
+      setAmount('')
     }
   }
 
@@ -41,8 +43,8 @@ export default function Transacoes() {
 
       <label>Tipo</label>
       <select
-        value={tipo}
-        onChange={e => setTipo(e.target.value)}
+        value={type}
+        onChange={e => setType(e.target.value)}
         style={{ width: '100%', marginBottom: 10 }}
       >
         <option value="entrada">Entrada</option>
@@ -51,8 +53,8 @@ export default function Transacoes() {
 
       <label>Categoria</label>
       <select
-        value={categoria}
-        onChange={e => setCategoria(e.target.value)}
+        value={category}
+        onChange={e => setCategory(e.target.value)}
         style={{ width: '100%', marginBottom: 10 }}
       >
         <option value="alimentacao">Alimentação</option>
@@ -66,8 +68,8 @@ export default function Transacoes() {
       <label>Valor</label>
       <input
         type="number"
-        value={valor}
-        onChange={e => setValor(e.target.value)}
+        value={amount}
+        onChange={e => setAmount(e.target.value)}
         style={{ width: '100%', marginBottom: 10 }}
       />
 
