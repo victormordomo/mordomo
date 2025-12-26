@@ -1,55 +1,51 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
 export default function Onboarding() {
   const router = useRouter()
 
-  const [user, setUser] = useState(null)
+  const [etapa, setEtapa] = useState('escolha')
   const [tipoConta, setTipoConta] = useState('')
   const [nome1, setNome1] = useState('')
   const [nome2, setNome2] = useState('')
   const [mensagem, setMensagem] = useState('')
 
-  useEffect(() => {
-    async function carregarUsuario() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
-        setMensagem('Usuário não autenticado')
-        return
-      }
-
-      setUser(user)
-    }
-
-    carregarUsuario()
-  }, [])
-
-  async function escolherTipo(tipo) {
+  async function escolher(tipo) {
     setTipoConta(tipo)
+    setEtapa('nomes')
   }
 
   async function salvarDados() {
+    setMensagem('Salvando...')
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
     if (!user) {
       setMensagem('Usuário não autenticado')
       return
     }
 
-    const dados = {
-      id: user.id,
-      tipo_conta: tipoConta,
-      nome_1: nome1,
-      nome_2: tipoConta === 'casal' ? nome2 : null,
-    }
+    const payload =
+      tipoConta === 'individual'
+        ? {
+            id: user.id,
+            tipo_conta: 'individual',
+            nome1,
+            nome2: null,
+          }
+        : {
+            id: user.id,
+            tipo_conta: 'casal',
+            nome1,
+            nome2,
+          }
 
-    const { error } = await supabase
-      .from('profiles')
-      .upsert(dados, { onConflict: 'id' })
+    const { error } = await supabase.from('profiles').upsert(payload)
 
     if (error) {
       console.error(error)
@@ -63,24 +59,19 @@ export default function Onboarding() {
     <div style={{ padding: 40, maxWidth: 400 }}>
       <h1>Bem-vindo ao Mordomo</h1>
 
-      {!tipoConta && (
+      {etapa === 'escolha' && (
         <>
           <p>Como você deseja usar o sistema?</p>
-          <button onClick={() => escolherTipo('individual')}>
-            Individual
-          </button>
-          <button
-            onClick={() => escolherTipo('casal')}
-            style={{ marginLeft: 10 }}
-          >
+          <button onClick={() => escolher('individual')}>Individual</button>
+          <button onClick={() => escolher('casal')} style={{ marginLeft: 10 }}>
             Casal
           </button>
         </>
       )}
 
-      {tipoConta && (
+      {etapa === 'nomes' && (
         <>
-          <p>Preencha os dados</p>
+          <p>Informe os nomes</p>
 
           <input
             placeholder="Nome"
@@ -98,9 +89,7 @@ export default function Onboarding() {
             />
           )}
 
-          <button onClick={salvarDados}>
-            Salvar
-          </button>
+          <button onClick={salvarDados}>Salvar</button>
         </>
       )}
 
