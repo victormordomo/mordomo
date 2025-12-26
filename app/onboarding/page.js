@@ -1,64 +1,74 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
+import { useRouter } from 'next/navigation'
 
 export default function Onboarding() {
   const router = useRouter()
 
-  const [tipo, setTipo] = useState('')
+  const [etapa, setEtapa] = useState('tipo')
+  const [tipoConta, setTipoConta] = useState('')
   const [nome1, setNome1] = useState('')
   const [nome2, setNome2] = useState('')
   const [mensagem, setMensagem] = useState('')
 
+  async function escolherTipo(tipo) {
+    setTipoConta(tipo)
+    setEtapa('nomes')
+  }
+
   async function salvarDados() {
+    setMensagem('Salvando...')
+
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser()
 
-    if (!user) {
+    if (userError || !user) {
       setMensagem('Usuário não autenticado')
       return
     }
 
-    const dados =
-      tipo === 'casal'
+    const payload =
+      tipoConta === 'individual'
         ? {
+            id: user.id,
+            tipo_conta: 'individual',
+            nome_1: nome1,
+            nome_2: null,
+          }
+        : {
             id: user.id,
             tipo_conta: 'casal',
             nome_1: nome1,
             nome_2: nome2,
           }
-        : {
-            id: user.id,
-            tipo_conta: 'individual',
-            nome_1: nome1,
-          }
 
-    const { error } = await supabase.from('profiles').upsert(dados)
+    const { error } = await supabase.from('profiles').upsert(payload)
 
     if (error) {
+      console.error(error)
       setMensagem('Erro ao salvar os dados')
-      return
+    } else {
+      router.push('/dashboard')
     }
-
-    // 🔥 REDIRECIONAMENTO GARANTIDO
-    router.push('/dashboard')
   }
 
   return (
     <div style={{ padding: 40, maxWidth: 400 }}>
-      <h1>Configuração inicial</h1>
-
-      {!tipo && (
+      {etapa === 'tipo' && (
         <>
+          <h1>Bem-vindo ao Mordomo</h1>
           <p>Como você deseja usar o sistema?</p>
-          <button onClick={() => setTipo('individual')}>
+
+          <button onClick={() => escolherTipo('individual')}>
             Individual
           </button>
+
           <button
-            onClick={() => setTipo('casal')}
+            onClick={() => escolherTipo('casal')}
             style={{ marginLeft: 10 }}
           >
             Casal
@@ -66,40 +76,35 @@ export default function Onboarding() {
         </>
       )}
 
-      {tipo === 'individual' && (
+      {etapa === 'nomes' && (
         <>
-          <p>Seu nome</p>
+          <h2>Informe os nomes</h2>
+
           <input
+            placeholder={
+              tipoConta === 'individual'
+                ? 'Seu nome'
+                : 'Nome da primeira pessoa'
+            }
             value={nome1}
             onChange={e => setNome1(e.target.value)}
+            style={{ width: '100%', marginBottom: 10 }}
           />
-          <br /><br />
-          <button onClick={salvarDados}>
-            Salvar
-          </button>
+
+          {tipoConta === 'casal' && (
+            <input
+              placeholder="Nome da segunda pessoa"
+              value={nome2}
+              onChange={e => setNome2(e.target.value)}
+              style={{ width: '100%', marginBottom: 10 }}
+            />
+          )}
+
+          <button onClick={salvarDados}>Salvar</button>
+
+          {mensagem && <p>{mensagem}</p>}
         </>
       )}
-
-      {tipo === 'casal' && (
-        <>
-          <p>Nome do cônjuge 1</p>
-          <input
-            value={nome1}
-            onChange={e => setNome1(e.target.value)}
-          />
-          <p>Nome do cônjuge 2</p>
-          <input
-            value={nome2}
-            onChange={e => setNome2(e.target.value)}
-          />
-          <br /><br />
-          <button onClick={salvarDados}>
-            Salvar
-          </button>
-        </>
-      )}
-
-      {mensagem && <p>{mensagem}</p>}
     </div>
   )
 }
